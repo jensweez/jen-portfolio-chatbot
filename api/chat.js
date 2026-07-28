@@ -49,15 +49,26 @@ If someone asks about RAG specifically, you can mention that both the Lead-Captu
 If someone asks about a skill Jennifer doesn't have a project for, say so honestly rather than stretching a project to fit — you can still mention her general background/education if relevant. If asked something unrelated to her work (e.g. general chit-chat, unrelated topics), politely redirect to her projects/skills.`;
 
 export default async function handler(req) {
+  const headers = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': 'https://jensweez.github.io',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers });
+  }
+
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
   }
 
   try {
     const { messages } = await req.json();
 
     if (!Array.isArray(messages) || messages.length === 0) {
-      return new Response(JSON.stringify({ error: 'No messages provided' }), { status: 400 });
+      return new Response(JSON.stringify({ error: 'No messages provided' }), { status: 400, headers });
     }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -77,17 +88,14 @@ export default async function handler(req) {
 
     if (!response.ok) {
       const errText = await response.text();
-      return new Response(JSON.stringify({ error: 'Upstream error', detail: errText }), { status: 502 });
+      return new Response(JSON.stringify({ error: 'Upstream error', detail: errText }), { status: 502, headers });
     }
 
     const data = await response.json();
     const reply = data.content?.[0]?.text || "Sorry, I didn't catch that.";
 
-    return new Response(JSON.stringify({ reply }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ reply }), { status: 200, headers });
   } catch (err) {
-    return new Response(JSON.stringify({ error: 'Server error', detail: String(err) }), { status: 500 });
+    return new Response(JSON.stringify({ error: 'Server error', detail: String(err) }), { status: 500, headers });
   }
 }
